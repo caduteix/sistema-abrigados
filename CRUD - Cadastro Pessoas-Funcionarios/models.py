@@ -11,7 +11,9 @@ class PessoaAbrigada(Base):
     data_nascimento = Column(Date)
     documento = Column(String, nullable=True)
     sexo = Column(String)
+    data_entrada = Column(Date)
     condicoes_saude = Column(String)
+    
 
 class Funcionario(Base):
     __tablename__ = 'funcionario'
@@ -20,6 +22,7 @@ class Funcionario(Base):
     nome = Column(String)
     cargo = Column(String)
     contato = Column(String)
+    data_admissao = Column(Date)
 
 from database import engine
 Base.metadata.create_all(bind=engine)
