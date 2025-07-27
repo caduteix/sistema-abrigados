@@ -66,6 +66,15 @@ unidade_medida = pn.widgets.Select(
     disabled=False
 )
 
+# NOVO: Widget para o nome do doador
+nome_doador = pn.widgets.TextInput(
+    name="Nome do Doador",
+    value='',
+    placeholder='Nome ou organização do doador (opcional)',
+    disabled=False
+)
+
+
 filter_tipo_item = pn.widgets.Select(
     name="Filtrar por Tipo",
     options=TIPOS_DE_ITEM,
@@ -95,8 +104,9 @@ buttonResetarEstoque = pn.widgets.Button(name='RESETAR ESTOQUE (ATENÇÃO!)', bu
 
 
 buttonConsultar.on_click(lambda event: on_consultar_estoque(id_item, filter_tipo_item, filter_unidade_medida, filter_descricao_text))
-buttonInserir.on_click(lambda event: on_inserir_item(tipo_item, descricao, quantidade_atual, unidade_medida))
-buttonAtualizar.on_click(lambda event: on_atualizar_item(id_item, tipo_item, descricao, quantidade_atual, unidade_medida))
+# ATUALIZADO: Passando o novo widget nome_doador para as funções de CRUD
+buttonInserir.on_click(lambda event: on_inserir_item(tipo_item, descricao, quantidade_atual, unidade_medida, nome_doador))
+buttonAtualizar.on_click(lambda event: on_atualizar_item(id_item, tipo_item, descricao, quantidade_atual, unidade_medida, nome_doador))
 buttonExcluir.on_click(lambda event: on_excluir_item(id_item))
 buttonResetarEstoque.on_click(lambda event: on_resetar_estoque())
 
@@ -106,6 +116,7 @@ insert_controls = pn.Column(
     descricao,
     quantidade_atual,
     unidade_medida,
+    nome_doador, # NOVO: Adicionado o widget nome_doador aqui
     pn.Row(buttonInserir, sizing_mode='stretch_width', align='center'),
     css_classes=['control-panel-section']
 )

@@ -19,7 +19,7 @@ def get_estoque_tabulator(query_str):
         return pn.widgets.Tabulator(pd.DataFrame())
 
 def update_estoque_display():
-    query = "SELECT * FROM doacoes_estoque ORDER BY id_item_estoque ASC;"
+    query = "SELECT id_item_estoque, tipo_item, descricao, quantidade_atual, unidade_medida, data_ultima_movimentacao, nome_doador FROM doacoes_estoque ORDER BY id_item_estoque ASC;"
     estoque_table_pane.objects = [get_estoque_tabulator(query)]
 
 def on_consultar_estoque(id_item_widget, filter_tipo_widget, filter_unidade_widget, filter_descricao_text_widget):
@@ -32,7 +32,7 @@ def on_consultar_estoque(id_item_widget, filter_tipo_widget, filter_unidade_widg
     filter_unidade_val = filter_unidade_widget.value
     filter_descricao_text_val = filter_descricao_text_widget.value.strip()
 
-    query = "SELECT * FROM doacoes_estoque WHERE 1=1"
+    query = "SELECT id_item_estoque, tipo_item, descricao, quantidade_atual, unidade_medida, data_ultima_movimentacao, nome_doador FROM doacoes_estoque WHERE 1=1"
 
     if item_id_val != 0:
         query += f" AND id_item_estoque = {item_id_val}"
@@ -58,7 +58,7 @@ def on_consultar_estoque(id_item_widget, filter_tipo_widget, filter_unidade_widg
         pn.pane.Alert(f'Não foi possível consultar: {str(e)}', alert_type='danger')
         update_estoque_display()
 
-def on_inserir_item(tipo_item_widget, descricao_widget, quantidade_atual_widget, unidade_medida_widget):
+def on_inserir_item(tipo_item_widget, descricao_widget, quantidade_atual_widget, unidade_medida_widget, nome_doador_widget):
     if con is None:
         pn.pane.Alert('Erro: Conexão com o banco de dados não estabelecida.', alert_type='danger')
         return
@@ -71,8 +71,8 @@ def on_inserir_item(tipo_item_widget, descricao_widget, quantidade_atual_widget,
     try:
         cursor = con.cursor()
         cursor.execute(
-            "INSERT INTO doacoes_estoque (tipo_item, descricao, quantidade_atual, unidade_medida) VALUES (%s, %s, %s, %s);",
-            (tipo_item_widget.value, descricao_widget.value, quantidade_atual_widget.value, unidade_medida_widget.value)
+            "INSERT INTO doacoes_estoque (tipo_item, descricao, quantidade_atual, unidade_medida, nome_doador) VALUES (%s, %s, %s, %s, %s);",
+            (tipo_item_widget.value, descricao_widget.value, quantidade_atual_widget.value, unidade_medida_widget.value, nome_doador_widget.value)
         )
         con.commit()
         pn.pane.Alert('Item inserido com sucesso! ID gerado automaticamente pelo banco.', alert_type='success')
@@ -80,6 +80,7 @@ def on_inserir_item(tipo_item_widget, descricao_widget, quantidade_atual_widget,
         quantidade_atual_widget.value = 0
         tipo_item_widget.value = TIPOS_DE_ITEM[1]
         unidade_medida_widget.value = UNIDADES_DE_MEDIDA[1]
+        nome_doador_widget.value = ''
         update_estoque_display()
     except Exception as e:
         if con:
@@ -89,7 +90,7 @@ def on_inserir_item(tipo_item_widget, descricao_widget, quantidade_atual_widget,
         if cursor:
             cursor.close()
 
-def on_atualizar_item(id_item_widget, tipo_item_widget, descricao_widget, quantidade_atual_widget, unidade_medida_widget):
+def on_atualizar_item(id_item_widget, tipo_item_widget, descricao_widget, quantidade_atual_widget, unidade_medida_widget, nome_doador_widget):
     if con is None:
         pn.pane.Alert('Erro: Conexão com o banco de dados não estabelecida.', alert_type='danger')
         return
@@ -112,10 +113,10 @@ def on_atualizar_item(id_item_widget, tipo_item_widget, descricao_widget, quanti
         cursor.execute(
             """
             UPDATE doacoes_estoque
-            SET tipo_item = %s, descricao = %s, quantidade_atual = %s, unidade_medida = %s, data_ultima_movimentacao = CURRENT_TIMESTAMP
+            SET tipo_item = %s, descricao = %s, quantidade_atual = %s, unidade_medida = %s, data_ultima_movimentacao = CURRENT_TIMESTAMP, nome_doador = %s
             WHERE id_item_estoque = %s;
             """,
-            (tipo_item_widget.value, descricao_widget.value, quantidade_atual_widget.value, unidade_medida_widget.value, id_item_widget.value)
+            (tipo_item_widget.value, descricao_widget.value, quantidade_atual_widget.value, unidade_medida_widget.value, nome_doador_widget.value, id_item_widget.value)
         )
         if cursor.rowcount == 0:
             pn.pane.Alert(f'Nenhum item encontrado com o ID: {id_item_widget.value} para atualizar.', alert_type='info')
@@ -170,13 +171,14 @@ def on_resetar_estoque():
     cursor = None
     try:
         cursor = con.cursor()
-        cursor.execute("TRUNCATE TABLE doacoes_estoque RESTART IDENTITY;")
+        cursor.execute("TRUNCATE TABLE doacoes_estoque RESTART IDENTITY CASCADE;")
         con.commit()
         pn.pane.Alert('Estoque resetado com sucesso! Todos os dados foram apagados e IDs reiniciados.', alert_type='success')
         update_estoque_display()
     except Exception as e:
         if con:
             con.rollback()
+        print(f"Erro ao resetar estoque: {e}")
         pn.pane.Alert(f'Não foi possível resetar o estoque: {str(e)}', alert_type='danger')
     finally:
         if cursor:
