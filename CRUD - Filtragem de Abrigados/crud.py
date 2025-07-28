@@ -3,7 +3,7 @@ from models import PessoaAbrigada
 from datetime import date
 
 # CREATE
-def create_abrigado(db: Session, nome: str, genero: str, data_nascimento: date, documento: str, status: str, condicoes_saude: str):
+def create_abrigado(db: Session, nome, genero, data_nascimento, documento, status, condicoes_saude):
     novo = PessoaAbrigada(
         nome=nome,
         genero=genero,
@@ -12,10 +12,14 @@ def create_abrigado(db: Session, nome: str, genero: str, data_nascimento: date, 
         status=status,
         condicoes_saude=condicoes_saude
     )
-    db.add(novo)
-    db.commit()
-    db.refresh(novo)
-    return novo
+    try:
+        db.add(novo)
+        db.commit()
+        db.refresh(novo)
+        return novo
+    except Exception as e:
+        db.rollback()
+        raise e
 
 # READ
 def read_abrigados(db: Session):
@@ -33,15 +37,19 @@ def filter_abrigados(db: Session, nome=None, status=None, genero=None):
     return query.all()
 
 # UPDATE
-def update_abrigado(db: Session, id: int, novos_dados: dict):
+ddef update_abrigado(db: Session, id: int, novos_dados: dict):
     abrigado = db.query(PessoaAbrigada).filter(PessoaAbrigada.id == id).first()
     if not abrigado:
         return None
     for campo, valor in novos_dados.items():
         setattr(abrigado, campo, valor)
-    db.commit()
-    db.refresh(abrigado)
-    return abrigado
+    try:
+        db.commit()
+        db.refresh(abrigado)
+        return abrigado
+    except Exception as e:
+        db.rollback()
+        raise e
 
 # DELETE
 def delete_abrigado(db: Session, id: int):
