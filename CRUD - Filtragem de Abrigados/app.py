@@ -1,87 +1,147 @@
 import panel as pn
-import datetime
-from crud import (
-    create_abrigado, read_abrigados, delete_abrigado,
-    update_abrigado, filter_abrigados
-)
+import pandas as pd
+from datetime import datetime
 from database import SessionLocal
+from crud import create_abrigado, read_abrigados, delete_abrigado, update_abrigado, filter_abrigados
 
 pn.extension()
 
 db = SessionLocal()
 
+# Widgets de busca
+busca_nome = pn.widgets.TextInput(name="Buscar por nome")
+busca_status = pn.widgets.Select(name="Status", options=["", "abrigado", "encaminhado", "saiu"])
+busca_genero = pn.widgets.Select(name="Gênero", options=["", "Masculino", "Feminino", "Outro"])
+botao_buscar = pn.widgets.Button(name="Buscar", button_type="primary")
+
+# Formulário de cadastro/edição
 form_nome = pn.widgets.TextInput(name="Nome")
-form_genero = pn.widgets.Select(name="Genero", options=["Masculino", "Feminino", "Outro"])
-form_data_nascimento = pn.widgets.DatePicker(name="Data de Nascimento", value=datetime.date.today())
+form_genero = pn.widgets.Select(name="Gênero", options=["Masculino", "Feminino", "Outro"])
+form_nascimento = pn.widgets.DatePicker(name="Data de nascimento")
 form_documento = pn.widgets.TextInput(name="Documento")
-form_status = pn.widgets.Select(name="Status", options=["abrigado", "saiu", "encaminhado"])
-form_condicoes = pn.widgets.TextAreaInput(name="Condicoes de saude")
+form_status = pn.widgets.Select(name="Status", options=["abrigado", "encaminhado", "saiu"])
+form_condicoes = pn.widgets.TextAreaInput(name="Condições de saúde")
 
-form_id = pn.widgets.IntInput(name="ID do abrigado (para editar/excluir)")
+botao_salvar = pn.widgets.Button(name="Salvar novo", button_type="success")
+botao_atualizar = pn.widgets.Button(name="Atualizar", button_type="primary", visible=False)
 
-# Tabela
-tabela = pn.pane.DataFrame(read_abrigados(db), width=900, height=300)
+# Área de resultado
+tabela = pn.pane.DataFrame(pd.DataFrame(), sizing_mode="stretch_width", height=300)
+mensagem = pn.pane.Markdown("")
 
-def cadastrar(event):
-    create_abrigado(
+# ID do registro que está sendo editado
+abrigado_editando_id = [None]
+
+# Funções
+def carregar_tabela(event=None):
+    abrigados = filter_abrigados(
         db,
-        form_nome.value,
-        form_genero.value,
-        form_data_nascimento.value,
-        form_documento.value,
-        form_status.value,
-        form_condicoes.value
+        nome=busca_nome.value,
+        status=busca_status.value if busca_status.value else None,
+        genero=busca_genero.value if busca_genero.value else None
     )
-    tabela.object = read_abrigados(db)
+    df = pd.DataFrame([{
+        "ID": a.id,
+        "Nome": a.nome,
+        "Gênero": a.genero,
+        "Nascimento": a.data_nascimento,
+        "Documento": a.documento,
+        "Status": a.status,
+        "Saúde": a.condicoes_saude
+    } for a in abrigados])
+    tabela.object = df
 
-def atualizar(event):
-    novos_dados = {
+def salvar_novo(event):
+    try:
+        create_abrigado(
+            db,
+            nome=form_nome.value,
+            genero=form_genero.value,
+            data_nascimento=form_nascimento.value,
+            documento=form_documento.value,
+            status=form_status.value,
+            condicoes_saude=form_condicoes.value
+        )
+        mensagem.object = "✅ Abrigado salvo com sucesso!"
+        limpar_form()
+        carregar_tabela()
+    except Exception as e:
+        mensagem.object = f"❌ Erro: {e}"
+
+def limpar_form():
+    form_nome.value = ""
+    form_genero.value = "Masculino"
+    form_nascimento.value = None
+    form_documento.value = ""
+    form_status.value = "abrigado"
+    form_condicoes.value = ""
+    abrigado_editando_id[0] = None
+    botao_salvar.visible = True
+    botao_atualizar.visible = False
+
+def editar_abrigado(event):
+    try:
+        id = int(event.new)
+        dados = [a for a in read_abrigados(db) if a.id == id][0]
+        form_nome.value = dados.nome
+        form_genero.value = dados.genero
+        form_nascimento.value = dados.data_nascimento
+        form_documento.value = dados.documento
+        form_status.value = dados.status
+        form_condicoes.value = dados.condicoes_saude
+        abrigado_editando_id[0] = id
+        botao_salvar.visible = False
+        botao_atualizar.visible = True
+    except:
+        mensagem.object = "❌ ID inválido para edição."
+
+def atualizar_abrigado_click(event):
+    update_abrigado(db, abrigado_editando_id[0], {
         "nome": form_nome.value,
         "genero": form_genero.value,
-        "data_nascimento": form_data_nascimento.value,
+        "data_nascimento": form_nascimento.value,
         "documento": form_documento.value,
         "status": form_status.value,
         "condicoes_saude": form_condicoes.value
-    }
-    update_abrigado(db, form_id.value, novos_dados)
-    tabela.object = read_abrigados(db)
+    })
+    mensagem.object = "✅ Abrigado atualizado!"
+    limpar_form()
+    carregar_tabela()
 
-def excluir(event):
-    delete_abrigado(db, form_id.value)
-    tabela.object = read_abrigados(db)
+def excluir_abrigado_click(event):
+    try:
+        id = int(event.new)
+        if delete_abrigado(db, id):
+            mensagem.object = f"🗑️ Abrigado ID {id} excluído com sucesso."
+            carregar_tabela()
+        else:
+            mensagem.object = "❌ Abrigado não encontrado."
+    except:
+        mensagem.object = "❌ ID inválido para exclusão."
 
-def filtrar(event):
-    resultado = filter_abrigados(
-        db,
-        nome=form_nome.value,
-        status=form_status.value,
-        genero=form_genero.value
-    )
-    tabela.object = resultado
+# Ações
+botao_buscar.on_click(carregar_tabela)
+botao_salvar.on_click(salvar_novo)
+botao_atualizar.on_click(atualizar_abrigado_click)
 
-botao_cadastrar = pn.widgets.Button(name="Cadastrar", button_type="primary")
-botao_cadastrar.on_click(cadastrar)
+# Campos para editar ou excluir por ID
+campo_id_editar = pn.widgets.TextInput(name="Editar ID")
+campo_id_excluir = pn.widgets.TextInput(name="Excluir ID")
+campo_id_editar.param.watch(editar_abrigado, 'value')
+campo_id_excluir.param.watch(excluir_abrigado_click, 'value')
 
-botao_atualizar = pn.widgets.Button(name="Atualizar", button_type="warning")
-botao_atualizar.on_click(atualizar)
-
-botao_excluir = pn.widgets.Button(name="Excluir", button_type="danger")
-botao_excluir.on_click(excluir)
-
-botao_filtrar = pn.widgets.Button(name="Filtrar", button_type="success")
-botao_filtrar.on_click(filtrar)
-
-layout = pn.Column(
-    "## CRUD de Pessoas Abrigadas",
-    form_id,
-    form_nome,
-    form_genero,
-    form_data_nascimento,
-    form_documento,
-    form_status,
-    form_condicoes,
-    pn.Row(botao_cadastrar, botao_atualizar, botao_excluir, botao_filtrar),
-    tabela
+# Layout
+interface = pn.Column(
+    "## Busca e Filtragem de Abrigados",
+    pn.Row(busca_nome, busca_status, busca_genero, botao_buscar),
+    tabela,
+    "## Ações",
+    pn.Row(campo_id_editar, campo_id_excluir),
+    "## Formulário de Cadastro/Edição",
+    form_nome, form_genero, form_nascimento, form_documento, form_status, form_condicoes,
+    pn.Row(botao_salvar, botao_atualizar),
+    mensagem
 )
 
-layout.servable()
+# Inicia a aplicação
+interface.servable()
