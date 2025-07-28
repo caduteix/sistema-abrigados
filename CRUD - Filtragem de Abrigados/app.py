@@ -11,28 +11,28 @@ db = SessionLocal()
 # Widgets de busca
 busca_nome = pn.widgets.TextInput(name="Buscar por nome")
 busca_status = pn.widgets.Select(name="Status", options=["", "abrigado", "encaminhado", "saiu"])
-busca_genero = pn.widgets.Select(name="Gênero", options=["", "Masculino", "Feminino", "Outro"])
+busca_genero = pn.widgets.Select(name="Genero", options=["", "Masculino", "Feminino", "Outro"])
 botao_buscar = pn.widgets.Button(name="Buscar", button_type="primary")
 
-# Formulário de cadastro/edição
+# Formulario de cadastro/edicao
 form_nome = pn.widgets.TextInput(name="Nome")
-form_genero = pn.widgets.Select(name="Gênero", options=["Masculino", "Feminino", "Outro"])
+form_genero = pn.widgets.Select(name="Genero", options=["Masculino", "Feminino", "Outro"])
 form_nascimento = pn.widgets.DatePicker(name="Data de nascimento")
 form_documento = pn.widgets.TextInput(name="Documento")
 form_status = pn.widgets.Select(name="Status", options=["abrigado", "encaminhado", "saiu"])
-form_condicoes = pn.widgets.TextAreaInput(name="Condições de saúde")
+form_condicoes = pn.widgets.TextAreaInput(name="Condicoes de saude")
 
 botao_salvar = pn.widgets.Button(name="Salvar novo", button_type="success")
 botao_atualizar = pn.widgets.Button(name="Atualizar", button_type="primary", visible=False)
 
-# Área de resultado
+# Area de resultado
 tabela = pn.pane.DataFrame(pd.DataFrame(), sizing_mode="stretch_width", height=300)
 mensagem = pn.pane.Markdown("")
 
-# ID do registro que está sendo editado
+# ID do registro que esta sendo editado
 abrigado_editando_id = [None]
 
-# Funções
+# Funcoes
 def carregar_tabela(event=None):
     abrigados = filter_abrigados(
         db,
@@ -43,11 +43,11 @@ def carregar_tabela(event=None):
     df = pd.DataFrame([{
         "ID": a.id,
         "Nome": a.nome,
-        "Gênero": a.genero,
+        "Genero": a.genero,
         "Nascimento": a.data_nascimento,
         "Documento": a.documento,
         "Status": a.status,
-        "Saúde": a.condicoes_saude
+        "Saude": a.condicoes_saude
     } for a in abrigados])
     tabela.object = df
 
@@ -93,7 +93,7 @@ def editar_abrigado(event):
         botao_salvar.visible = False
         botao_atualizar.visible = True
     except:
-        mensagem.object = "❌ ID inválido para edição."
+        mensagem.object = "❌ ID invalido para edicao."
 
 def atualizar_abrigado_click(event):
     update_abrigado(db, abrigado_editando_id[0], {
@@ -112,14 +112,14 @@ def excluir_abrigado_click(event):
     try:
         id = int(event.new)
         if delete_abrigado(db, id):
-            mensagem.object = f"🗑️ Abrigado ID {id} excluído com sucesso."
+            mensagem.object = f"🗑️ Abrigado ID {id} excluido com sucesso."
             carregar_tabela()
         else:
-            mensagem.object = "❌ Abrigado não encontrado."
+            mensagem.object = "❌ Abrigado nao encontrado."
     except:
-        mensagem.object = "❌ ID inválido para exclusão."
+        mensagem.object = "❌ ID invalido para exclusao."
 
-# Ações
+# Acoes
 botao_buscar.on_click(carregar_tabela)
 botao_salvar.on_click(salvar_novo)
 botao_atualizar.on_click(atualizar_abrigado_click)
@@ -135,13 +135,13 @@ interface = pn.Column(
     "## Busca e Filtragem de Abrigados",
     pn.Row(busca_nome, busca_status, busca_genero, botao_buscar),
     tabela,
-    "## Ações",
+    "## Acoes",
     pn.Row(campo_id_editar, campo_id_excluir),
-    "## Formulário de Cadastro/Edição",
+    "## Formulario de Cadastro/Edicao",
     form_nome, form_genero, form_nascimento, form_documento, form_status, form_condicoes,
     pn.Row(botao_salvar, botao_atualizar),
     mensagem
 )
 
-# Inicia a aplicação
+# Inicia a aplicacao
 interface.servable()
