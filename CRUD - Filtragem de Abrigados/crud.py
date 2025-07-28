@@ -37,7 +37,7 @@ def filter_abrigados(db: Session, nome=None, status=None, genero=None):
     return query.all()
 
 # UPDATE
-ddef update_abrigado(db: Session, id: int, novos_dados: dict):
+def update_abrigado(db: Session, id: int, novos_dados: dict):
     abrigado = db.query(PessoaAbrigada).filter(PessoaAbrigada.id == id).first()
     if not abrigado:
         return None
